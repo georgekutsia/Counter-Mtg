@@ -24,9 +24,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topHalf: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#1e40af',
   },
   bottomHalf: {
-    backgroundColor: '#334155',
+    backgroundColor: '#b91c1c',
   },
 });
