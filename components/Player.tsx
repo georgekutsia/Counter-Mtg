@@ -1,41 +1,64 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
 type PlayerProps = {
   name: string;
+  size?: 'small' | 'medium' | 'large';
 };
 
 const STARTING_LIFE = 20;
 
-export default function Player({ name }: PlayerProps) {
+export default function Player({ name, size = 'large' }: PlayerProps) {
   const [life, setLife] = useState<number>(STARTING_LIFE);
 
   const modify = (delta: number) => setLife((v) => v + delta);
   const reset = () => setLife(STARTING_LIFE);
+  const s = useMemo(() => sizesByMode(size), [size]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.name}>{name}</Text>
-      <Text style={styles.life}>{life}</Text>
+      <Text style={[styles.name, { fontSize: s.nameFont }]}>{name}</Text>
+      <Text style={[styles.life, { fontSize: s.lifeFont }]}>{life}</Text>
       <View style={styles.controlsRow}>
-        <AdjustButton label="-5" onPress={() => modify(-5)} />
-        <AdjustButton label="-1" onPress={() => modify(-1)} />
-        <AdjustButton label="+1" onPress={() => modify(+1)} />
-        <AdjustButton label="+5" onPress={() => modify(+5)} />
+        <AdjustButton label="-5" onPress={() => modify(-5)} padH={s.btnPadH} padV={s.btnPadV} />
+        <AdjustButton label="-1" onPress={() => modify(-1)} padH={s.btnPadH} padV={s.btnPadV} />
+        <AdjustButton label="+1" onPress={() => modify(+1)} padH={s.btnPadH} padV={s.btnPadV} />
+        <AdjustButton label="+5" onPress={() => modify(+5)} padH={s.btnPadH} padV={s.btnPadV} />
       </View>
       <Pressable
         onPress={reset}
-        style={({ pressed }) => [styles.resetBtn, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.resetBtn,
+          { paddingVertical: s.btnPadV, paddingHorizontal: s.btnPadH },
+          pressed && styles.pressed,
+        ]}
       >
-        <Text style={styles.resetText}>Reset</Text>
+        <Text style={[styles.resetText, { fontSize: s.btnFont }]}>Reset</Text>
       </Pressable>
     </View>
   );
 }
 
-function AdjustButton({ label, onPress }: { label: string; onPress: () => void }) {
+function AdjustButton({
+  label,
+  onPress,
+  padH,
+  padV,
+}: {
+  label: string;
+  onPress: () => void;
+  padH: number;
+  padV: number;
+}) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.btn, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btn,
+        { paddingHorizontal: padH, paddingVertical: padV },
+        pressed && styles.pressed,
+      ]}
+    >
       <Text style={styles.btnText}>{label}</Text>
     </Pressable>
   );
@@ -90,3 +113,14 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
+
+function sizesByMode(mode: 'small' | 'medium' | 'large') {
+  switch (mode) {
+    case 'small':
+      return { lifeFont: 40, nameFont: 14, btnPadH: 10, btnPadV: 8, btnFont: 14 };
+    case 'medium':
+      return { lifeFont: 52, nameFont: 16, btnPadH: 12, btnPadV: 10, btnFont: 16 };
+    default:
+      return { lifeFont: 64, nameFont: 18, btnPadH: 16, btnPadV: 12, btnFont: 16 };
+  }
+}
