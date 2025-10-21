@@ -1,0 +1,41 @@
+// Pauper banned cards (manual list provided by user)
+
+export const BANNED_PAUPER: string[] = [
+  'Aarakocra Sneak',
+  'All That Glitters',
+  "Arcum's Astrolabe",
+  'Atog',
+  'Basking Broodscale',
+  "Bonder's Ornament",
+  'Chatterstorm',
+  'Cloud of Faeries',
+  'Cloudpost',
+  'Cranial Plating',
+  'Cranial Ram',
+  'Daze',
+  'Deadly Dispute',
+  'Disciple of the Vault',
+  'Empty the Warrens',
+  'Fall from Favor',
+  'Frantic Search',
+  'Galvanic Relay',
+  'Gitaxian Probe',
+  'Grapeshot',
+  'Gush',
+  'Hymn to Tourach',
+  'Invigorate',
+  'Kuldotha Rebirth',
+  'Monastery Swiftspear',
+  'Mystic Sanctuary',
+  'Peregrine Drake',
+  'Sinkhole',
+  "Sojourner's Companion",
+  'Stirring Bard',
+  'Temporal Fissure',
+  'Treasure Cruise',
+  'Underdark Explorer',
+  'Vicious Battlerager',
+];
+
+export default BANNED_PAUPER;
+
