@@ -1,8 +1,29 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { SafeAreaView, View, StyleSheet, Pressable, Text, TextInput, Image, ImageBackground, ActivityIndicator, ScrollView, Linking, useWindowDimensions, Modal, Platform } from 'react-native';
+﻿import React, { useMemo, useState, useEffect } from 'react';
+import {
+  SafeAreaView,
+  View,
+  StyleSheet,
+  Pressable,
+  Text,
+  TextInput,
+  Image,
+  ImageBackground,
+  ActivityIndicator,
+  ScrollView,
+  Linking,
+  useWindowDimensions,
+  Modal,
+  Platform,
+} from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Player from '../components/Player';
-import { fetchCardImageByName, fetchCardsByName, fetchRulings, MtgCard, MtgRuling } from '../api/mtg';
+import {
+  fetchCardImageByName,
+  fetchCardsByName,
+  fetchRulings,
+  MtgCard,
+  MtgRuling,
+} from '../api/mtg';
 import BANNED_COMMANDER from '../data/commander-banlist';
 import BANNED_PAUPER from '../data/pauper-banlist';
 import BANNED_PIONEER from '../data/pioneer-banlist';
@@ -28,7 +49,11 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
     [],
   );
   const playersMeta = useMemo(
-    () => Array.from({ length: capped }, (_, i) => ({ name: `Player ${i + 1}`, color: palette[i % palette.length] })),
+    () =>
+      Array.from({ length: capped }, (_, i) => ({
+        name: `Player ${i + 1}`,
+        color: palette[i % palette.length],
+      })),
     [capped, palette],
   );
 
@@ -58,7 +83,9 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
   const desktopImgW = isDesktop ? Math.max(120, desktopItemW - 12) : 0;
   const desktopImgH = isDesktop ? Math.round(desktopImgW / 0.716) : 0;
   const desktopGridWidth = isDesktop ? Math.floor(width * 0.9) : undefined;
-  const [banFormat, setBanFormat] = useState<'commander' | 'pauper' | 'pioneer' | 'brawl' | 'standard' | 'modern' | 'legacy'>('commander');
+  const [banFormat, setBanFormat] = useState<
+    'commander' | 'pauper' | 'pioneer' | 'brawl' | 'standard' | 'modern' | 'legacy'
+  >('commander');
   const visibleBanlist = React.useMemo(() => {
     switch (banFormat) {
       case 'pauper':
@@ -110,7 +137,10 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
       if (!missing.length) return;
       try {
         const results = await Promise.all(
-          missing.map(async (name) => ({ name, url: await fetchCardImageByName(name, controller.signal) }))
+          missing.map(async (name) => ({
+            name,
+            url: await fetchCardImageByName(name, controller.signal),
+          })),
         );
         setBanImages((prev) => {
           const next = { ...prev } as Record<string, string | undefined>;
@@ -130,7 +160,9 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
     setSearchUrl(card?.imageUrl);
     setRulings([]);
     if (card?.id) {
-      fetchRulings(card.id).then(setRulings).catch(() => setRulings([]));
+      fetchRulings(card.id)
+        .then(setRulings)
+        .catch(() => setRulings([]));
     }
   }
 
@@ -295,10 +327,43 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
       )}
 
       {activeTab === 'other' && (
-        <View style={[styles.otherTab, isDesktop ? styles.otherTabDesktop : null, (!isDesktop && isLandscape) ? styles.otherTabLandscape : null]}>
-          <ImageBackground source={require('../assets/Plans.png')} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          <ScrollView style={{ width: '100%' }} contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16 }}>
-          <View style={styles.searchRow}>
+        <View
+          style={[
+            styles.otherTab,
+            isDesktop ? styles.otherTabDesktop : null,
+            !isDesktop && isLandscape ? styles.otherTabLandscape : null,
+          ]}
+        >
+          <ImageBackground
+            source={require('../assets/Plans.png')}
+            style={styles.bgImage}
+            imageStyle={styles.bgImageInner}
+            resizeMode={isLandscape ? 'cover' : 'cover'}
+          />
+          <ScrollView
+            style={{ width: '100%' }}
+            contentContainerStyle={{
+              alignItems: 'center',
+              paddingHorizontal: 16,
+              paddingBottom: 16,
+            }}
+          >
+            <View style={styles.searchRow}>
+              <Pressable
+                onPress={() => setActiveTab('counter')}
+                style={styles.smallBtn}
+                accessibilityLabel={'Back to counters'}
+              >
+                <FontAwesome5 name="chevron-left" size={16} color="#e2e8f0" />
+              </Pressable>
+              <Pressable
+                onPress={() => Linking.openURL('https://gatherer.wizards.com/')}
+                style={styles.smallBtn}
+              >
+                <Text style={styles.actionSecondaryText}>Gatherer</Text>
+              </Pressable>
+            </View>
+          <View style={[styles.searchRow, isLandscape ? { flexWrap: 'nowrap' } : null]}>
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -308,59 +373,140 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Pressable
-              onPress={async () => {
-                setSearchError(undefined);
-                setSearchLoading(true);
-                setSearchUrl(undefined);
-                try {
-                  const url = await fetchCardImageByName(searchQuery);
-                  if (!url) setSearchError('No image found');
-                  setSearchUrl(url);
-                } catch (e) {
-                  setSearchError('Error searching card');
-                } finally {
-                  setSearchLoading(false);
-                }
-              }}
-              style={styles.searchBtn}
-            >
-              <Text style={styles.searchBtnText}>Search</Text>
-            </Pressable>
-          </View>
 
-          {isLandscape ? (
-            <View style={styles.searchSplitRow}>
-              <View style={styles.searchLeft}>
+              <Pressable
+                onPress={async () => {
+                  setSearchError(undefined);
+                  setSearchLoading(true);
+                  setSearchUrl(undefined);
+                  try {
+                    const url = await fetchCardImageByName(searchQuery);
+                    if (!url) setSearchError('No image found');
+                    setSearchUrl(url);
+                  } catch (e) {
+                    setSearchError('Error searching card');
+                  } finally {
+                    setSearchLoading(false);
+                  }
+                }}
+                style={styles.searchBtn}
+              >
+                <FontAwesome5 name="search" size={16} color="#fff" style={styles.zoomNavIcon} />
+              </Pressable>
+            </View>
+
+            {isLandscape ? (
+              <View style={styles.searchSplitRow}>
+                <View style={styles.searchLeft}>
+                  <View style={styles.searchResult}>
+                    {searchLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : searchUrl ? (
+                      <Image
+                        source={{ uri: searchUrl }}
+                        style={styles.cardImage}
+                        resizeMode="contain"
+                      />
+                    ) : searchError ? (
+                      <Text style={styles.otherSubtitle}>{searchError}</Text>
+                    ) : (
+                      <Text style={styles.otherSubtitle}>Type a name and press Search</Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.searchRight}>
+                  <View style={[styles.resultsWrap, { height: 240 }]}>
+                    {results.length ? (
+                      <ScrollView
+                        style={styles.resultsScroll}
+                        contentContainerStyle={styles.resultsList}
+                        showsVerticalScrollIndicator={true}
+                      >
+                        {results.map((c, idx) => (
+                          <Pressable
+                            key={`${c.id}-${idx}`}
+                            onPress={() => selectCard(idx)}
+                            style={[
+                              styles.resultItem,
+                              selectedIdx === idx ? styles.resultItemActive : null,
+                            ]}
+                          >
+                            <Text style={styles.resultText} numberOfLines={1}>
+                              {c.name ?? 'Sin nombre'}
+                            </Text>
+                            <Text style={styles.resultMeta} numberOfLines={1}>
+                              {c.setName ?? ''}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : null}
+                  </View>
+                  {!!rulings.length && (
+                    <View style={[styles.rulingsBox, { marginTop: 10 }]}>
+                      <Text style={styles.rulingsTitle}>Rulings</Text>
+                      <ScrollView style={{ maxHeight: 200 }}>
+                        {rulings.map((r, i) => (
+                          <View key={i} style={{ marginBottom: 8 }}>
+                            <Text style={styles.rulingDate}>{r.date}</Text>
+                            <Text style={styles.rulingText}>{r.text}</Text>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ) : (
+              <>
                 <View style={styles.searchResult}>
                   {searchLoading ? (
                     <ActivityIndicator color="#fff" />
                   ) : searchUrl ? (
-                    <Image source={{ uri: searchUrl }} style={styles.cardImage} resizeMode="contain" />
+                    <Image
+                      source={{ uri: searchUrl }}
+                      style={styles.cardImage}
+                      resizeMode="contain"
+                    />
                   ) : searchError ? (
                     <Text style={styles.otherSubtitle}>{searchError}</Text>
                   ) : (
                     <Text style={styles.otherSubtitle}>Type a name and press Search</Text>
                   )}
                 </View>
-              </View>
-              <View style={styles.searchRight}>
-                <View style={[styles.resultsWrap, { height: 240 }] }>
+
+                <View style={styles.resultsWrap}>
                   {results.length ? (
-                    <ScrollView style={styles.resultsScroll} contentContainerStyle={styles.resultsList} showsVerticalScrollIndicator={true}>
+                    <ScrollView
+                      style={styles.resultsScroll}
+                      contentContainerStyle={styles.resultsList}
+                      showsVerticalScrollIndicator={true}
+                    >
                       {results.map((c, idx) => (
-                        <Pressable key={`${c.id}-${idx}`} onPress={() => selectCard(idx)} style={[styles.resultItem, selectedIdx === idx ? styles.resultItemActive : null]}>
-                          <Text style={styles.resultText} numberOfLines={1}>{c.name ?? 'Sin nombre'}</Text>
-                          <Text style={styles.resultMeta} numberOfLines={1}>{c.setName ?? ''}</Text>
+                        <Pressable
+                          key={`${c.id}-${idx}`}
+                          onPress={() => selectCard(idx)}
+                          style={[
+                            styles.resultItem,
+                            selectedIdx === idx ? styles.resultItemActive : null,
+                          ]}
+                        >
+                          <Text style={styles.resultText} numberOfLines={1}>
+                            {c.name ?? 'Sin nombre'}
+                          </Text>
+                          <Text style={styles.resultMeta} numberOfLines={1}>
+                            {c.setName ?? ''}
+                          </Text>
                         </Pressable>
                       ))}
                     </ScrollView>
                   ) : null}
                 </View>
+
                 {!!rulings.length && (
-                  <View style={[styles.rulingsBox, { marginTop: 10 }]}>
+                  <View style={styles.rulingsBox}>
                     <Text style={styles.rulingsTitle}>Rulings</Text>
-                    <ScrollView style={{ maxHeight: 200 }}>
+                    <ScrollView style={{ maxHeight: 180 }}>
                       {rulings.map((r, i) => (
                         <View key={i} style={{ marginBottom: 8 }}>
                           <Text style={styles.rulingDate}>{r.date}</Text>
@@ -370,59 +516,8 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                     </ScrollView>
                   </View>
                 )}
-              </View>
-            </View>
-          ) : (
-            <>
-              <View style={styles.searchResult}>
-                {searchLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : searchUrl ? (
-                  <Image source={{ uri: searchUrl }} style={styles.cardImage} resizeMode="contain" />
-                ) : searchError ? (
-                  <Text style={styles.otherSubtitle}>{searchError}</Text>
-                ) : (
-                  <Text style={styles.otherSubtitle}>Type a name and press Search</Text>
-                )}
-              </View>
-
-              <View style={styles.resultsWrap}>
-                {results.length ? (
-                  <ScrollView style={styles.resultsScroll} contentContainerStyle={styles.resultsList} showsVerticalScrollIndicator={true}>
-                    {results.map((c, idx) => (
-                      <Pressable key={`${c.id}-${idx}`} onPress={() => selectCard(idx)} style={[styles.resultItem, selectedIdx === idx ? styles.resultItemActive : null]}>
-                        <Text style={styles.resultText} numberOfLines={1}>{c.name ?? 'Sin nombre'}</Text>
-                        <Text style={styles.resultMeta} numberOfLines={1}>{c.setName ?? ''}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                ) : null}
-              </View>
-
-              {!!rulings.length && (
-                <View style={styles.rulingsBox}>
-                  <Text style={styles.rulingsTitle}>Rulings</Text>
-                  <ScrollView style={{ maxHeight: 180 }}>
-                    {rulings.map((r, i) => (
-                      <View key={i} style={{ marginBottom: 8 }}>
-                        <Text style={styles.rulingDate}>{r.date}</Text>
-                        <Text style={styles.rulingText}>{r.text}</Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </>
-          )}
-
-          <View style={[styles.buttonsWrap, { flexDirection:'row'}]}>
-            <Pressable onPress={() => setActiveTab('counter')} style={styles.smallBtn}>
-              <Text style={styles.actionSecondaryText}>Back to counters</Text>
-            </Pressable>
-            <Pressable onPress={() => Linking.openURL('https://gatherer.wizards.com/')} style={styles.smallBtn}>
-              <Text style={styles.actionSecondaryText}>Open Gatherer</Text>
-            </Pressable>
-          </View>
+              </>
+            )}
           </ScrollView>
         </View>
       )}
@@ -430,54 +525,98 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
       {activeTab === 'banlist' && (
         <View style={styles.otherTab}>
           <Text style={styles.otherTitle}>{banLabel} Banlist</Text>
-          <Text style={styles.otherSubtitle}>Always visible list (static snapshot)</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Pressable onPress={() => setBanFormat('commander')} style={[styles.smallBtn, banFormat === 'commander' ? styles.smallBtnActive : null]}>
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 8,
+              marginBottom: 8,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            <Pressable
+              onPress={() => setBanFormat('commander')}
+              style={[styles.smallBtn, banFormat === 'commander' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Commander</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('pauper')} style={[styles.smallBtn, banFormat === 'pauper' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('pauper')}
+              style={[styles.smallBtn, banFormat === 'pauper' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Pauper</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('pioneer')} style={[styles.smallBtn, banFormat === 'pioneer' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('pioneer')}
+              style={[styles.smallBtn, banFormat === 'pioneer' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Pioneer</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('brawl')} style={[styles.smallBtn, banFormat === 'brawl' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('brawl')}
+              style={[styles.smallBtn, banFormat === 'brawl' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Brawl</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('standard')} style={[styles.smallBtn, banFormat === 'standard' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('standard')}
+              style={[styles.smallBtn, banFormat === 'standard' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Standard</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('modern')} style={[styles.smallBtn, banFormat === 'modern' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('modern')}
+              style={[styles.smallBtn, banFormat === 'modern' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Modern</Text>
             </Pressable>
-            <Pressable onPress={() => setBanFormat('legacy')} style={[styles.smallBtn, banFormat === 'legacy' ? styles.smallBtnActive : null]}>
+            <Pressable
+              onPress={() => setBanFormat('legacy')}
+              style={[styles.smallBtn, banFormat === 'legacy' ? styles.smallBtnActive : null]}
+            >
               <Text style={styles.actionSecondaryText}>Legacy</Text>
             </Pressable>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-            <Pressable onPress={() => Linking.openURL('https://magic.wizards.com/en/banned-restricted-list')} style={styles.smallBtn}>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Pressable
+              onPress={() => Linking.openURL('https://magic.wizards.com/en/banned-restricted-list')}
+              style={[styles.smallBtn, styles.smallBtnTight]}
+            >
               <Text style={styles.actionSecondaryText}>Open Wizards Page</Text>
             </Pressable>
-          </View>
-          {!isDesktop && (
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-              <Pressable onPress={() => setBanHorizontal((v) => !v)} style={[styles.smallBtn, banHorizontal ? styles.smallBtnActive : null]}>
-                <Text style={styles.actionSecondaryText}>{banHorizontal ? 'Vista vertical' : 'Vista horizontal'}</Text>
+            {!isDesktop && (
+              <Pressable
+                onPress={() => setBanHorizontal((v) => !v)}
+                style={[styles.smallBtn, styles.smallBtnTight, banHorizontal ? styles.smallBtnActive : null]}
+              >
+                <Text style={styles.actionSecondaryText}>
+                  {banHorizontal ? 'Vista vertical' : 'Vista horizontal'}
+                </Text>
               </Pressable>
-            </View>
-          )}
-          <View style={[
-            styles.rulingsBox,
-            banHorizontal ? styles.rulingsWide : null,
-            isDesktop ? [styles.rulingsBoxDesktop, { width: desktopContainerW, maxWidth: desktopContainerW }] : null,
-          ]}>
+            )}
+          </View>
+          <View
+            style={[
+              styles.rulingsBox,
+              banHorizontal ? styles.rulingsWide : null,
+              isDesktop
+                ? [
+                    styles.rulingsBoxDesktop,
+                    { width: desktopContainerW, maxWidth: desktopContainerW },
+                  ]
+                : null,
+            ]}
+          >
             {isDesktop ? (
               <ScrollView style={[styles.banGridScroll, { flex: 1 }]} showsVerticalScrollIndicator>
                 <View style={styles.banGrid}>
                   {visibleBanlist.map((name, idx) => {
                     const url = banImages[name];
                     return (
-                      <View key={`${name}-${idx}`} style={[styles.banGridItem, desktopItemW ? { width: desktopItemW } : null]}>
+                      <View
+                        key={`${name}-${idx}`}
+                        style={[styles.banGridItem, desktopItemW ? { width: desktopItemW } : null]}
+                      >
                         <Pressable
                           onPress={() => {
                             if (url) {
@@ -488,12 +627,27 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                           }}
                         >
                           {url ? (
-                            <Image source={{ uri: url }} style={[styles.banGridThumb, desktopImgW ? { width: desktopImgW, height: desktopImgH } : null]} resizeMode="cover" />
+                            <Image
+                              source={{ uri: url }}
+                              style={[
+                                styles.banGridThumb,
+                                desktopImgW ? { width: desktopImgW, height: desktopImgH } : null,
+                              ]}
+                              resizeMode="cover"
+                            />
                           ) : (
-                            <View style={[styles.banGridThumb, { backgroundColor: '#111' }, desktopImgW ? { width: desktopImgW, height: desktopImgH } : null]} />
+                            <View
+                              style={[
+                                styles.banGridThumb,
+                                { backgroundColor: '#111' },
+                                desktopImgW ? { width: desktopImgW, height: desktopImgH } : null,
+                              ]}
+                            />
                           )}
                         </Pressable>
-                        <Text style={styles.banCardNameGrid} numberOfLines={2}>{name}</Text>
+                        <Text style={styles.banCardNameGrid} numberOfLines={2}>
+                          {name}
+                        </Text>
                       </View>
                     );
                   })}
@@ -520,12 +674,29 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                         }}
                       >
                         {url ? (
-                          <Image source={{ uri: url }} style={[styles.banThumb, styles.banThumbLarge, isDesktop ? styles.banThumbLargeDesktop : null]} resizeMode="cover" />
+                          <Image
+                            source={{ uri: url }}
+                            style={[
+                              styles.banThumb,
+                              styles.banThumbLarge,
+                              isDesktop ? styles.banThumbLargeDesktop : null,
+                            ]}
+                            resizeMode="cover"
+                          />
                         ) : (
-                          <View style={[styles.banThumb, styles.banThumbLarge, isDesktop ? styles.banThumbLargeDesktop : null, { backgroundColor: '#111' }]} />
+                          <View
+                            style={[
+                              styles.banThumb,
+                              styles.banThumbLarge,
+                              isDesktop ? styles.banThumbLargeDesktop : null,
+                              { backgroundColor: '#111' },
+                            ]}
+                          />
                         )}
                       </Pressable>
-                      <Text style={styles.banCardName} numberOfLines={2}>{name}</Text>
+                      <Text style={styles.banCardName} numberOfLines={2}>
+                        {name}
+                      </Text>
                     </View>
                   );
                 })}
@@ -546,9 +717,19 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                         }}
                       >
                         {url ? (
-                          <Image source={{ uri: url }} style={[styles.banThumb, isDesktop ? styles.banThumbDesktop : null]} resizeMode="cover" />
+                          <Image
+                            source={{ uri: url }}
+                            style={[styles.banThumb, isDesktop ? styles.banThumbDesktop : null]}
+                            resizeMode="cover"
+                          />
                         ) : (
-                          <View style={[styles.banThumb, isDesktop ? styles.banThumbDesktop : null, { backgroundColor: '#111' }]} />
+                          <View
+                            style={[
+                              styles.banThumb,
+                              isDesktop ? styles.banThumbDesktop : null,
+                              { backgroundColor: '#111' },
+                            ]}
+                          />
                         )}
                       </Pressable>
                       <Text style={styles.resultText}>{name}</Text>
@@ -559,9 +740,25 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
             )}
           </View>
 
-          <Modal visible={zoomIndex !== null} transparent animationType="fade" onRequestClose={() => { setZoomIndex(null); setZoomUrl(null); setZoomName(null); }}>
+          <Modal
+            visible={zoomIndex !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              setZoomIndex(null);
+              setZoomUrl(null);
+              setZoomName(null);
+            }}
+          >
             <View style={styles.zoomOverlay}>
-              <Pressable style={StyleSheet.absoluteFill} onPress={() => { setZoomIndex(null); setZoomUrl(null); setZoomName(null); }} />
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => {
+                  setZoomIndex(null);
+                  setZoomUrl(null);
+                  setZoomName(null);
+                }}
+              />
               <View style={styles.zoomContent}>
                 {(() => {
                   if (zoomIndex === null) return null;
@@ -570,7 +767,11 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                   return (
                     <>
                       {url ? (
-                        <Image source={{ uri: url }} style={styles.zoomImage} resizeMode="contain" />
+                        <Image
+                          source={{ uri: url }}
+                          style={styles.zoomImage}
+                          resizeMode="contain"
+                        />
                       ) : (
                         <View style={[styles.zoomImage, { backgroundColor: '#111' }]} />
                       )}
@@ -578,24 +779,56 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                     </>
                   );
                 })()}
-                <Pressable onPress={() => { setZoomIndex(null); setZoomUrl(null); setZoomName(null); }} style={styles.zoomCloseBtn}>
+                <Pressable
+                  onPress={() => {
+                    setZoomIndex(null);
+                    setZoomUrl(null);
+                    setZoomName(null);
+                  }}
+                  style={styles.zoomCloseBtn}
+                >
                   <Text style={styles.actionSecondaryText}>Close</Text>
                 </Pressable>
               </View>
-              <Pressable style={[styles.zoomNavBase, styles.zoomNavLeft]} onPress={() => { if (zoomIndex !== null && zoomIndex > 0) setZoomIndex(zoomIndex - 1); }}>
+              <Pressable
+                style={[styles.zoomNavBase, styles.zoomNavLeft]}
+                onPress={() => {
+                  if (zoomIndex !== null && zoomIndex > 0) setZoomIndex(zoomIndex - 1);
+                }}
+              >
                 {zoomIndex !== null && zoomIndex > 0 ? (
-                  <FontAwesome5 name="chevron-left" size={36} color="#fff" style={styles.zoomNavIcon} />
+                  <FontAwesome5
+                    name="chevron-left"
+                    size={36}
+                    color="#fff"
+                    style={styles.zoomNavIcon}
+                  />
                 ) : null}
               </Pressable>
-              <Pressable style={[styles.zoomNavBase, styles.zoomNavRight]} onPress={() => { if (zoomIndex !== null && zoomIndex < visibleBanlist.length - 1) setZoomIndex(zoomIndex + 1); }}>
+              <Pressable
+                style={[styles.zoomNavBase, styles.zoomNavRight]}
+                onPress={() => {
+                  if (zoomIndex !== null && zoomIndex < visibleBanlist.length - 1)
+                    setZoomIndex(zoomIndex + 1);
+                }}
+              >
                 {zoomIndex !== null && zoomIndex < visibleBanlist.length - 1 ? (
-                  <FontAwesome5 name="chevron-right" size={36} color="#fff" style={styles.zoomNavIcon} />
+                  <FontAwesome5
+                    name="chevron-right"
+                    size={36}
+                    color="#fff"
+                    style={styles.zoomNavIcon}
+                  />
                 ) : null}
               </Pressable>
             </View>
           </Modal>
-          <Pressable onPress={() => setActiveTab('counter')} style={[styles.smallBtn, { marginTop: 10 }]}>
-            <Text style={styles.actionSecondaryText}>Back to counters</Text>
+          <Pressable
+            onPress={() => setActiveTab('counter')}
+            style={[styles.smallBtn, { marginTop: 10 }]}
+            accessibilityLabel={'Back to counters'}
+          >
+            <FontAwesome5 name="chevron-left" size={16} color="#e2e8f0" />
           </Pressable>
         </View>
       )}
@@ -670,12 +903,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 1,
     overflow: 'hidden',
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  bgImageInner: {
+    width: '100%',
+    height: '100%',
   },
   otherTabLandscape: {
     justifyContent: 'flex-start',
-    paddingTop: 12,
+    paddingTop: 2,
     overflow: 'visible',
   },
   otherTabDesktop: {
@@ -705,16 +946,17 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
+    gap: 3,
+    marginTop: 2,
+    flexWrap: 'wrap',
   },
   searchSplitRow: {
     flexDirection: 'row',
     width: '100%',
-    gap: 8,
+    gap: 3,
     alignItems: 'flex-start',
-    marginTop: 10,
-    paddingHorizontal: 8,
+    marginTop: 3,
+    paddingHorizontal: 3,
   },
   searchLeft: {
     flex: 1,
@@ -863,7 +1105,8 @@ const styles = StyleSheet.create({
   rulingsBox: {
     width: '100%',
     maxWidth: 420,
-    marginTop: 12,
+    maxHeight: '50%',
+    marginTop: 2,
     padding: 12,
     borderRadius: 12,
     backgroundColor: '#000',
@@ -1061,7 +1304,7 @@ const styles = StyleSheet.create({
   smallBtn: {
     alignSelf: 'center',
     backgroundColor: '#000',
-    paddingVertical: 8,
+    paddingVertical: 2,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
@@ -1070,6 +1313,10 @@ const styles = StyleSheet.create({
   smallBtnActive: {
     backgroundColor: '#111',
     borderColor: '#fff',
+  },
+  smallBtnTight: {
+    paddingVertical: 2,
+    paddingHorizontal: 3,
   },
   buttonsWrap: {
     marginTop: 12,

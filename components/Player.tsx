@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions, Platform, Modal, TextInput, StyleSheet } from 'react-native';
+import styles from './styles/Player.styles';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 type PlayerProps = {
@@ -386,7 +387,8 @@ function SquareAdjustButton({
   );
 }
 
-const styles = StyleSheet.create({
+/* styles moved to components/styles/Player.styles.ts */
+/* const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -679,7 +681,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     alignItems: 'center',
   },
-});
+}); */
 
 function BackgroundFill({ colors }: { colors: string[] }) {
   if (!colors || colors.length === 0) return null;
