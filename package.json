@@ -8,10 +8,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "update:banlist": "node scripts/update-commander-banlist.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "^1.23.1",
     "expo": "~54.0.13",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",

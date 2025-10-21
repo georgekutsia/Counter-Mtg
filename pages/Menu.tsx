@@ -3,11 +3,13 @@ import { SafeAreaView, View, Text, Pressable, StyleSheet } from 'react-native';
 
 type MenuProps = {
   initialPlayers?: number;
-  onStart: (players: number) => void;
+  initialLife?: 20 | 30 | 40;
+  onStart: (players: number, life: 20 | 30 | 40) => void;
 };
 
-export default function Menu({ initialPlayers = 2, onStart }: MenuProps) {
+export default function Menu({ initialPlayers = 2, initialLife = 20, onStart }: MenuProps) {
   const [selected, setSelected] = useState<number>(initialPlayers);
+  const [life, setLife] = useState<20 | 30 | 40>(initialLife);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -26,7 +28,20 @@ export default function Menu({ initialPlayers = 2, onStart }: MenuProps) {
         ))}
       </View>
 
-      <Pressable onPress={() => onStart(selected)} style={styles.startBtn}>
+      <Text style={styles.subtitle}>Vidas iniciales</Text>
+      <View style={styles.lifeRow}>
+        {[20, 30, 40].map((v) => (
+          <Pressable
+            key={v}
+            onPress={() => setLife(v as 20 | 30 | 40)}
+            style={[styles.lifeBtn, life === v ? styles.lifeBtnSelected : null]}
+          >
+            <Text style={styles.lifeText}>{v}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Pressable onPress={() => onStart(selected, life)} style={styles.startBtn}>
         <Text style={styles.startText}>Comenzar</Text>
       </Pressable>
     </SafeAreaView>
@@ -59,6 +74,11 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 12,
   },
+  lifeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
   option: {
     width: 80,
     height: 80,
@@ -70,9 +90,25 @@ const styles = StyleSheet.create({
   optionSelected: {
     backgroundColor: '#0ea5e9',
   },
+  lifeBtn: {
+    minWidth: 80,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#1e293b',
+  },
+  lifeBtnSelected: {
+    backgroundColor: '#0ea5e9',
+  },
   optionText: {
     color: '#f8fafc',
     fontSize: 28,
+    fontWeight: '800',
+  },
+  lifeText: {
+    color: '#f8fafc',
+    fontSize: 22,
     fontWeight: '800',
   },
   startBtn: {
