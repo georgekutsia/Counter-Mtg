@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, useWindowDimensions, Platform, Modal, TextInput, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions, Platform, Modal, TextInput, StyleSheet, Animated, Easing } from 'react-native';
 import styles from './styles/Player.styles';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -10,9 +10,11 @@ type PlayerProps = {
   initialColors?: string[];
   resetSignal?: number;
   allPlayers?: { name: string; color: string }[];
+  highlight?: boolean;
+  flash?: boolean;
 };
 
-export default function Player({ name, size = 'large', startingLife = 20, initialColors, resetSignal = 0, allPlayers }: PlayerProps) {
+export default function Player({ name, size = 'large', startingLife = 20, initialColors, resetSignal = 0, allPlayers, highlight = false, flash = false }: PlayerProps) {
   const [life, setLife] = useState<number>(startingLife);
   const [poison, setPoison] = useState<number>(0);
   const [rotation, setRotation] = useState<number>(0);
@@ -41,7 +43,20 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
     setPoison(0);
   }, [resetSignal, startingLife]);
 
-  const modify = (delta: number) => setLife((v) => v + delta);
+  const [lifeDelta, setLifeDelta] = useState<number | null>(null);
+  const lifeDeltaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showDelta = (amount: number) => {
+    setLifeDelta((prev) => (prev ?? 0) + amount);
+    if (lifeDeltaTimerRef.current) {
+      clearTimeout(lifeDeltaTimerRef.current);
+      lifeDeltaTimerRef.current = null;
+    }
+    lifeDeltaTimerRef.current = setTimeout(() => setLifeDelta(null), 2000);
+  };
+  const modify = (delta: number, silent = false) => {
+    setLife((v) => v + delta);
+    if (!silent) showDelta(delta);
+  };
   const modifyPoison = (delta: number) =>
     setPoison((v) => {
       const next = Math.max(0, Math.min(10, v + delta));
@@ -54,6 +69,40 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
   };
   const s = useMemo(() => sizesByMode(size), [size]);
   const lost = life <= 0 || poison >= 10;
+  // Smooth fade for highlight border
+  const borderOpacity = React.useRef(new Animated.Value(0)).current;
+  const glowAnim = React.useRef(new Animated.Value(0)).current;
+  const glowLoopRef = React.useRef<Animated.CompositeAnimation | null>(null);
+  const [leftDown, setLeftDown] = useState(false);
+  const [rightDown, setRightDown] = useState(false);
+  const leftLongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rightLongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leftDidLongRef = useRef(false);
+  const rightDidLongRef = useRef(false);
+  React.useEffect(() => {
+    Animated.timing(borderOpacity, {
+      toValue: highlight ? 1 : 0,
+      duration: 220,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+    if (highlight) {
+      glowAnim.setValue(0);
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 1, duration: 500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(glowAnim, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ]),
+      );
+      glowLoopRef.current = loop;
+      loop.start();
+    } else {
+      glowLoopRef.current?.stop?.();
+      glowLoopRef.current = null;
+    }
+  }, [highlight]);
   const lifePress = (d: number) => {
     setShowPoison(false);
     setShowCmd(false);
@@ -127,6 +176,90 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
   return (
     <View style={styles.container}>
       <BackgroundFill colors={colors} />
+      {/* Life tap zones: left -1, right +1 (behind controls) */}
+      <View style={styles.touchPads} pointerEvents="box-none">
+        <Pressable
+          accessibilityLabel="Restar 1 vida"
+          onPress={() => {
+            if (!leftDidLongRef.current) lifePress(-1);
+          }}
+          onPressIn={() => setLeftDown(true)}
+          onPressOut={() => {
+            setLeftDown(false);
+            leftDidLongRef.current = false;
+            if (leftLongTimeoutRef.current) {
+              clearTimeout(leftLongTimeoutRef.current);
+              leftLongTimeoutRef.current = null;
+            }
+            if (leftIntervalRef.current) {
+              clearInterval(leftIntervalRef.current);
+              leftIntervalRef.current = null;
+            }
+          }}
+          onLongPress={() => {
+            // RN onLongPress fires at default ~500ms; we want 2s, so we implement our own timer below
+          }}
+          onPressInCapture={() => {
+            // Start 2s long-press timer for -5 repeat
+            if (leftLongTimeoutRef.current) clearTimeout(leftLongTimeoutRef.current);
+            leftLongTimeoutRef.current = setTimeout(() => {
+              leftDidLongRef.current = true;
+              lifePress(-5);
+              if (leftIntervalRef.current) clearInterval(leftIntervalRef.current);
+              leftIntervalRef.current = setInterval(() => lifePress(-5), 1000);
+            }, 2000);
+          }}
+          style={styles.padLeft}
+        />
+        <Pressable
+          accessibilityLabel="Sumar 1 vida"
+          onPress={() => {
+            if (!rightDidLongRef.current) lifePress(+1);
+          }}
+          onPressIn={() => setRightDown(true)}
+          onPressOut={() => {
+            setRightDown(false);
+            rightDidLongRef.current = false;
+            if (rightLongTimeoutRef.current) {
+              clearTimeout(rightLongTimeoutRef.current);
+              rightLongTimeoutRef.current = null;
+            }
+            if (rightIntervalRef.current) {
+              clearInterval(rightIntervalRef.current);
+              rightIntervalRef.current = null;
+            }
+          }}
+          onPressInCapture={() => {
+            if (rightLongTimeoutRef.current) clearTimeout(rightLongTimeoutRef.current);
+            rightLongTimeoutRef.current = setTimeout(() => {
+              rightDidLongRef.current = true;
+              lifePress(+5);
+              if (rightIntervalRef.current) clearInterval(rightIntervalRef.current);
+              rightIntervalRef.current = setInterval(() => lifePress(+5), 1000);
+            }, 2000);
+          }}
+          style={styles.padRight}
+        />
+      </View>
+      {/* Visual feedback for tap zones */}
+      <View pointerEvents="none" style={styles.touchPads}>
+        <View style={[styles.padLeft, leftDown ? styles.padHighlight : null]} />
+        <View style={[styles.padRight, rightDown ? styles.padHighlight : null]} />
+      </View>
+      {flash && <HighlightParticles />}
+      {/* Glow pulse under the border */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.glowOverlay,
+          {
+            opacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] }),
+            transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1.03] }) }],
+          },
+        ]}
+      />
+      {/* Fade-in/out highlight border */}
+      <Animated.View pointerEvents="none" style={[styles.highlightOverlay, { opacity: borderOpacity }]} />
       <Pressable
         accessibilityLabel="Girar jugador"
         onPress={() => {
@@ -135,7 +268,7 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
         }}
         style={({ pressed }) => [styles.rotateBtn, pressed && styles.pressed]}
       >
-        <FontAwesome5 name="sync" size={s.icon} color="#e2e8f0" />
+        <FontAwesome5 name="sync" size={18} color="#e2e8f0" />
       </Pressable>
       <Pressable
         accessibilityLabel="Reiniciar vidas"
@@ -146,7 +279,7 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
         }}
         style={({ pressed }) => [styles.resetIconBtn, pressed && styles.pressed]}
       >
-        <FontAwesome5 name="redo" size={s.icon} color="#e2e8f0" />
+        <FontAwesome5 name="redo" size={18} color="#e2e8f0" />
       </Pressable>
       <Pressable
         accessibilityLabel="Elegir colores"
@@ -163,10 +296,10 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
       {/* Toggles under palette (top-left) */}
       <View style={styles.leftTogglesRow}>
         <Pressable onPress={() => { setShowPoison((v) => !v); setShowCmd(false); }} style={({ pressed }) => [styles.poisonToggle, pressed && styles.pressed]} accessibilityLabel="Mostrar/ocultar veneno">
-          <FontAwesome5 name="biohazard" size={22} color="#22c55e" />
+          <FontAwesome5 name="biohazard" size={18} color="#22c55e" />
         </Pressable>
         <Pressable onPress={() => { setShowCmd((v) => !v); setShowPoison(false); }} style={({ pressed }) => [styles.cmdToggle, pressed && styles.pressed]} accessibilityLabel="Daño de comandante">
-          <FontAwesome5 name="crown" size={20} color="#facc15" />
+          <FontAwesome5 name="crown" size={18} color="#facc15" />
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Pressable onPress={() => { setShowTimer(true); setTimerMinimized(false); }} style={({ pressed }) => [styles.timerToggle, pressed && styles.pressed]} accessibilityLabel="Abrir contador de tiempo">
@@ -204,16 +337,19 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
           )}
           <Text style={styles.poisonBadge}>{poison}</Text>
         </View>
-        <View style={styles.controlsGrid}>
-          <View style={styles.controlsRow}>
-            <SquareAdjustButton label="-1" onPress={() => lifePress(-1)} fontSize={s.btnFont} compact={isDesktop} />
-            <SquareAdjustButton label="-5" onPress={() => lifePress(-5)} fontSize={s.btnFont} compact={isDesktop} />
+        {lifeDelta !== null && (
+          <View style={styles.lifeDeltaOverlay} pointerEvents="none">
+            <Text
+              style={[
+                styles.lifeDelta,
+                lifeDelta >= 0 ? styles.lifeDeltaPos : styles.lifeDeltaNeg,
+              ]}
+            >
+              {lifeDelta > 0 ? `+${lifeDelta}` : `${lifeDelta}`}
+            </Text>
           </View>
-          <View style={styles.controlsRow}>
-            <SquareAdjustButton label="+1" onPress={() => lifePress(+1)} fontSize={s.btnFont} compact={isDesktop} />
-            <SquareAdjustButton label="+5" onPress={() => lifePress(+5)} fontSize={s.btnFont} compact={isDesktop} />
-          </View>
-        </View>
+        )}
+        {/* Removed old +/- buttons in favor of tap zones */}
         {showPoison && (
           <View style={styles.poisonRow}>
             <Pressable
@@ -341,6 +477,64 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
           onClose={() => setShowPalette(false)}
         />
       )}
+    </View>
+  );
+}
+
+function HighlightParticles() {
+  const COUNT = 60;
+  const DURATION = 1500;
+  // Precompute particle vectors and sizes
+  const particles = React.useMemo(
+    () =>
+      Array.from({ length: COUNT }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 100 + Math.random() * 220; // px (mucho más grande)
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        const size = 10 + Math.random() * 14;
+        const delay = Math.floor(Math.random() * 200);
+        return { dx, dy, size, delay };
+      }),
+    [],
+  );
+
+  return (
+    <View pointerEvents="none" style={styles.particlesContainer}>
+      {particles.map((p, idx) => {
+        const prog = React.useRef(new Animated.Value(0)).current;
+        React.useEffect(() => {
+          const timer = setTimeout(() => {
+            Animated.timing(prog, {
+              toValue: 1,
+              duration: DURATION,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }).start();
+          }, p.delay);
+          return () => clearTimeout(timer);
+        }, [prog]);
+
+        const translateX = prog.interpolate({ inputRange: [0, 1], outputRange: [0, p.dx] });
+        const translateY = prog.interpolate({ inputRange: [0, 1], outputRange: [0, p.dy] });
+        const opacity = prog.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.5, 0] });
+        const scale = prog.interpolate({ inputRange: [0, 1], outputRange: [1.3, 0.3] });
+
+        return (
+          <Animated.View
+            key={idx}
+            style={[
+              styles.particle,
+              {
+                width: p.size,
+                height: p.size,
+                opacity,
+                transform: [{ translateX }, { translateY }, { scale }],
+              },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 }

@@ -133,6 +133,9 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
   const [diceOpen, setDiceOpen] = useState(false);
   const [diceValue, setDiceValue] = useState<number>(20);
   const diceAnim = React.useRef(new Animated.Value(0)).current;
+  const [spotlightIdx, setSpotlightIdx] = useState<number | null>(null);
+  const [spotlightFinal, setSpotlightFinal] = useState(false);
+  const [spotlightTrigger, setSpotlightTrigger] = useState(0);
 
   useEffect(() => {
     if (activeTab !== 'banlist') return;
@@ -221,6 +224,37 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
     };
   }, []);
 
+  // Spotlight effect on game start: randomly highlight players for ~3s,
+  // at least 8 switches if players >= 3, then settle on one.
+  useEffect(() => {
+    if (activeTab !== 'counter') return;
+    const total = Math.max(1, Math.min(6, capped));
+    if (total <= 0) return;
+    const minSteps = total >= 3 ? 8 : 4;
+    const duration = 3000;
+    const stepInterval = 150;
+    const steps = Math.max(minSteps, Math.floor(duration / stepInterval));
+    let count = 0;
+    let prev = -1;
+    setSpotlightFinal(false);
+    const id = setInterval(() => {
+      let idx = prev;
+      for (let safe = 0; safe < 10 && total > 1; safe++) {
+        idx = Math.floor(Math.random() * total);
+        if (idx !== prev) break;
+      }
+      prev = idx;
+      setSpotlightIdx(idx);
+      count++;
+      if (count >= steps) {
+        clearInterval(id);
+        // mark final selection, keep highlighted
+        setSpotlightFinal(true);
+      }
+    }, stepInterval);
+    return () => clearInterval(id);
+  }, [activeTab, capped, spotlightTrigger]);
+
   function rollD20() {
     const duration = 1200;
     // Shuffle numbers during spin
@@ -261,6 +295,8 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                     resetSignal={resetTick}
                     initialColors={[palette[idx % palette.length]]}
                     allPlayers={playersMeta}
+                    highlight={spotlightIdx === idx}
+                    flash={spotlightFinal && spotlightIdx === idx}
                   />
                 </View>
               </View>
@@ -279,6 +315,8 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
                   resetSignal={resetTick}
                   initialColors={[palette[(topCount + idx) % palette.length]]}
                   allPlayers={playersMeta}
+                  highlight={spotlightIdx === (topCount + idx)}
+                  flash={spotlightFinal && spotlightIdx === (topCount + idx)}
                 />
               </View>
             );
@@ -312,6 +350,14 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
         accessibilityLabel={'Open banlist'}
       >
         <FontAwesome5 name="ban" size={18} color="#e2e8f0" />
+      </Pressable>
+
+      <Pressable
+        onPress={() => setSpotlightTrigger((v) => v + 1)}
+        style={styles.chooseBtn}
+        accessibilityLabel={'Choose starter'}
+      >
+        <FontAwesome5 name="dice" size={16} color="#e2e8f0" />
       </Pressable>
 
       {false && (
@@ -377,6 +423,9 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
             <View style={styles.actionsRow}>
               <Pressable onPress={() => setResetTick((t) => t + 1)} style={styles.actionSecondary}>
                 <Text style={styles.actionSecondaryText}>Reset lives</Text>
+              </Pressable>
+              <Pressable onPress={() => setSpotlightTrigger((v) => v + 1)} style={styles.actionSecondary}>
+                <Text style={styles.actionSecondaryText}>Choose starter</Text>
               </Pressable>
               <Pressable onPress={() => setMenuOpen(false)} style={styles.actionSecondary}>
                 <Text style={styles.actionSecondaryText}>Close</Text>
@@ -945,10 +994,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -42 }, { translateY: -20 }],
-    width: 84,
-    height: 40,
-    borderRadius: 12,
+    transform: [{ translateX: -32 }, { translateY: -16 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: 'rgba(51, 65, 85, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -958,10 +1007,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: 52 }, { translateY: -20 }],
-    width: 84,
-    height: 40,
-    borderRadius: 12,
+    transform: [{ translateX: 40 }, { translateY: -16 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: 'rgba(51, 65, 85, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -971,10 +1020,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -136 }, { translateY: -20 }],
-    width: 84,
-    height: 40,
-    borderRadius: 12,
+    transform: [{ translateX: -104 }, { translateY: -16 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(51, 65, 85, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
+  chooseBtn: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -168 }, { translateY: -16 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: 'rgba(51, 65, 85, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -984,10 +1046,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: 0 }, { translateY: 28 }],
-    width: 84,
-    height: 40,
-    borderRadius: 12,
+    transform: [{ translateX: 0 }, { translateY: 24 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: 'rgba(51, 65, 85, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -997,10 +1059,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: 136 }, { translateY: -20 }],
-    width: 84,
-    height: 40,
-    borderRadius: 12,
+    transform: [{ translateX: 104 }, { translateY: -16 }],
+    width: 64,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: 'rgba(51, 65, 85, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
