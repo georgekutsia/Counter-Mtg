@@ -59,7 +59,10 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
     setShowCmd(false);
     modify(d);
   };
-  const opponents = useMemo(() => (allPlayers || []).filter((p) => p.name !== name), [allPlayers, name]);
+  const opponents = useMemo(() => {
+    const set = new Set<string>([name, displayName]);
+    return (allPlayers || []).filter((p) => !set.has(p.name));
+  }, [allPlayers, name, displayName]);
   const [cmdDamage, setCmdDamage] = useState<Record<string, number>>({});
   useEffect(() => {
     setCmdDamage((prev) => {
@@ -230,7 +233,14 @@ export default function Player({ name, size = 'large', startingLife = 20, initia
           </View>
         )}
         {showCmd && (
-          <Modal visible transparent animationType="fade" onRequestClose={() => setShowCmd(false)}>
+          <Modal
+            visible
+            transparent
+            presentationStyle="overFullScreen"
+            statusBarTranslucent
+            animationType="fade"
+            onRequestClose={() => setShowCmd(false)}
+          >
             <View style={styles.cmdOverlay}>
               <View style={styles.cmdPanel}>
                 <Text style={styles.cmdTitle}>Daño de comandante recibido</Text>

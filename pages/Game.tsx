@@ -15,6 +15,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import { Animated, Easing } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Player from '../components/Player';
 import {
@@ -128,6 +129,10 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const [zoomName, setZoomName] = useState<string | null>(null);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [diceOpen, setDiceOpen] = useState(false);
+  const [diceValue, setDiceValue] = useState<number>(20);
+  const diceAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (activeTab !== 'banlist') return;
@@ -203,6 +208,44 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
     };
   }, [searchQuery, activeTab]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const doc: any = (globalThis as any).document;
+    if (!doc) return;
+    const onChange = () => setIsFullscreen(!!doc.fullscreenElement);
+    try {
+      doc.addEventListener('fullscreenchange', onChange);
+    } catch {}
+    return () => {
+      try { doc.removeEventListener('fullscreenchange', onChange); } catch {}
+    };
+  }, []);
+
+  function rollD20() {
+    const duration = 1200;
+    // Shuffle numbers during spin
+    const tick = 60;
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      elapsed += tick;
+      setDiceValue(Math.floor(Math.random() * 20) + 1);
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        // land on a final value
+        setDiceValue(Math.floor(Math.random() * 20) + 1);
+      }
+    }, tick);
+    diceAnim.setValue(0);
+    Animated.timing(diceAnim, {
+      toValue: 1,
+      duration,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      diceAnim.setValue(0);
+    });
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.rows}>
@@ -271,6 +314,36 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
         <FontAwesome5 name="ban" size={18} color="#e2e8f0" />
       </Pressable>
 
+      {false && (
+        <Pressable
+          onPress={() => setDiceOpen(true)}
+          style={styles.diceBtn}
+          accessibilityLabel={'Roll a D20'}
+        >
+          <FontAwesome5 name="dice-d20" size={18} color="#e2e8f0" />
+        </Pressable>
+      )}
+
+      <Pressable
+        onPress={() => {
+          if (Platform.OS === 'web') {
+            try {
+              const doc: any = (globalThis as any).document;
+              if (!doc) return;
+              if (!doc.fullscreenElement && doc.documentElement?.requestFullscreen) {
+                doc.documentElement.requestFullscreen();
+              } else if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+              }
+            } catch {}
+          }
+        }}
+        style={styles.fullBtn}
+        accessibilityLabel={'Toggle fullscreen'}
+      >
+        <FontAwesome5 name={isFullscreen ? 'compress' : 'expand'} size={18} color="#e2e8f0" />
+      </Pressable>
+
       {menuOpen && (
         <View style={styles.overlay}>
           <View style={styles.panel}>
@@ -326,6 +399,15 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
         </View>
       )}
 
+      {false && diceOpen && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setDiceOpen(false)}>
+          <View style={styles.zoomOverlay}>
+            <View style={styles.dicePanel}>
+              <Text style={styles.rulingsTitle}>D20</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
       {activeTab === 'other' && (
         <View
           style={[
@@ -898,6 +980,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 3,
   },
+  diceBtn: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: 0 }, { translateY: 28 }],
+    width: 84,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(51, 65, 85, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
+  fullBtn: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: 136 }, { translateY: -20 }],
+    width: 84,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(51, 65, 85, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
   otherTab: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000000',
@@ -1115,6 +1223,54 @@ const styles = StyleSheet.create({
   },
   rulingsWide: {
     maxWidth: undefined,
+  },
+  dicePanel: {
+    width: '90%',
+    maxWidth: 320,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+  },
+  diceKnob: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#1f2937',
+    borderWidth: 2,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    position: 'relative',
+  },
+  diceKnobInner: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#0b1020',
+    borderWidth: 1,
+    borderColor: '#233044',
+  },
+  diceKnobNumber: {
+    color: '#e2e8f0',
+    fontWeight: '900',
+    fontSize: 40,
+  },
+  diceValue: {
+    color: '#e2e8f0',
+    fontWeight: '900',
+    fontSize: 48,
+    marginVertical: 12,
+  },
+  diceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+    justifyContent: 'space-between',
   },
   rulingsBoxDesktop: {
     alignSelf: 'center',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { SafeAreaView, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 type MenuProps = {
   initialPlayers?: number;
@@ -10,6 +11,16 @@ type MenuProps = {
 export default function Menu({ initialPlayers = 2, initialLife = 20, onStart }: MenuProps) {
   const [selected, setSelected] = useState<number>(initialPlayers);
   const [life, setLife] = useState<20 | 30 | 40>(initialLife);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const doc: any = (globalThis as any).document;
+    if (!doc) return;
+    const onChange = () => setIsFullscreen(!!doc.fullscreenElement);
+    try { doc.addEventListener('fullscreenchange', onChange); } catch {}
+    return () => { try { doc.removeEventListener('fullscreenchange', onChange); } catch {} };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,8 +52,41 @@ export default function Menu({ initialPlayers = 2, initialLife = 20, onStart }: 
         ))}
       </View>
 
-      <Pressable onPress={() => onStart(selected, life)} style={styles.startBtn}>
+      <Pressable
+        onPress={async () => {
+          if (Platform.OS === 'web') {
+            try {
+              const doc: any = (globalThis as any).document;
+              if (doc && !doc.fullscreenElement && doc.documentElement?.requestFullscreen) {
+                try { await doc.documentElement.requestFullscreen(); } catch {}
+              }
+            } catch {}
+          }
+          onStart(selected, life);
+        }}
+        style={styles.startBtn}
+      >
         <Text style={styles.startText}>Comenzar</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={async () => {
+          if (Platform.OS === 'web') {
+            try {
+              const doc: any = (globalThis as any).document;
+              if (!doc) return;
+              if (!doc.fullscreenElement && doc.documentElement?.requestFullscreen) {
+                try { await doc.documentElement.requestFullscreen(); } catch {}
+              } else if (doc.exitFullscreen) {
+                try { await doc.exitFullscreen(); } catch {}
+              }
+            } catch {}
+          }
+        }}
+        style={styles.fullBtn}
+        accessibilityLabel={'Toggle fullscreen'}
+      >
+        <FontAwesome5 name={isFullscreen ? 'compress' : 'expand'} size={18} color="#e2e8f0" />
       </Pressable>
     </SafeAreaView>
   );
@@ -112,11 +156,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   startBtn: {
-    marginTop: 'auto',
+    marginTop: 16,
     backgroundColor: '#22c55e',
     borderRadius: 12,
     paddingVertical: 14,
+    paddingHorizontal: 5,
     alignItems: 'center',
+    alignSelf: 'center',
+  },
+  fullBtn: {
+    marginTop: 8,
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    alignSelf: 'center',
   },
   startText: {
     color: '#052e12',

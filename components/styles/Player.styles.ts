@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     gap: 12,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   rotatable: {
     alignItems: 'center',
