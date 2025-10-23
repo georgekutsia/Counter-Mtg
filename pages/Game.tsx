@@ -15,7 +15,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, StatusBar } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Player from '../components/Player';
 import {
@@ -130,6 +130,7 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
   const [zoomName, setZoomName] = useState<string | null>(null);
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   const [diceOpen, setDiceOpen] = useState(false);
   const [diceValue, setDiceValue] = useState<number>(20);
   const diceAnim = React.useRef(new Animated.Value(0)).current;
@@ -371,23 +372,44 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
       )}
 
       <Pressable
-        onPress={() => {
+        onPress={async () => {
           if (Platform.OS === 'web') {
             try {
               const doc: any = (globalThis as any).document;
               if (!doc) return;
               if (!doc.fullscreenElement && doc.documentElement?.requestFullscreen) {
-                doc.documentElement.requestFullscreen();
+                await doc.documentElement.requestFullscreen();
               } else if (doc.exitFullscreen) {
-                doc.exitFullscreen();
+                await doc.exitFullscreen();
               }
             } catch {}
+          } else {
+            const next = !isNativeFullscreen;
+            try { StatusBar.setHidden(next, 'fade'); } catch {}
+            if (Platform.OS === 'android') {
+              try {
+                // Lazy require to avoid hard dependency
+                const NavigationBar = require('expo-navigation-bar');
+                if (next) {
+                  await NavigationBar.setVisibilityAsync('hidden');
+                  await NavigationBar.setBehaviorAsync('overlay-swipe');
+                } else {
+                  await NavigationBar.setVisibilityAsync('visible');
+                  await NavigationBar.setBehaviorAsync('inset-swipe');
+                }
+              } catch {}
+            }
+            setIsNativeFullscreen(next);
           }
         }}
         style={styles.fullBtn}
         accessibilityLabel={'Toggle fullscreen'}
       >
-        <FontAwesome5 name={isFullscreen ? 'compress' : 'expand'} size={18} color="#e2e8f0" />
+        <FontAwesome5
+          name={Platform.OS === 'web' ? (isFullscreen ? 'compress' : 'expand') : (isNativeFullscreen ? 'compress' : 'expand')}
+          size={18}
+          color="#e2e8f0"
+        />
       </Pressable>
 
       {menuOpen && (
