@@ -225,6 +225,29 @@ export default function Game({ count, startingLife = 20, onBack, onUpdate }: Gam
     };
   }, []);
 
+  // Auto-native fullscreen: hide system UI on mobile when in counters
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const toggle = async (on: boolean) => {
+      try { StatusBar.setHidden(on, 'fade'); } catch {}
+      if (Platform.OS === 'android') {
+        try {
+          const NavigationBar = require('expo-navigation-bar');
+          if (on) {
+            await NavigationBar.setVisibilityAsync('hidden');
+            await NavigationBar.setBehaviorAsync('overlay-swipe');
+          } else {
+            await NavigationBar.setVisibilityAsync('visible');
+            await NavigationBar.setBehaviorAsync('inset-swipe');
+          }
+        } catch {}
+      }
+      setIsNativeFullscreen(on);
+    };
+    toggle(activeTab === 'counter');
+    return () => { toggle(false); };
+  }, [activeTab]);
+
   // Spotlight effect on game start: randomly highlight players for ~3s,
   // at least 8 switches if players >= 3, then settle on one.
   useEffect(() => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { SafeAreaView, View, Text, Pressable, StyleSheet, Platform, StatusBar } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 type MenuProps = {
@@ -11,6 +11,19 @@ type MenuProps = {
 export default function Menu({ initialPlayers = 2, initialLife = 20, onStart }: MenuProps) {
   const [selected, setSelected] = useState<number>(initialPlayers);
   const [life, setLife] = useState<20 | 30 | 40>(initialLife);
+  React.useEffect(() => {
+    // Ensure system UI is visible when landing on the menu (native only)
+    if (Platform.OS !== 'web') {
+      try { StatusBar.setHidden(false, 'fade'); } catch {}
+      if (Platform.OS === 'android') {
+        try {
+          const NavigationBar = require('expo-navigation-bar');
+          NavigationBar.setVisibilityAsync('visible');
+          NavigationBar.setBehaviorAsync('inset-swipe');
+        } catch {}
+      }
+    }
+  }, []);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   React.useEffect(() => {
@@ -54,14 +67,24 @@ export default function Menu({ initialPlayers = 2, initialLife = 20, onStart }: 
 
       <Pressable
         onPress={async () => {
-          if (Platform.OS === 'web') {
-            try {
+          try {
+            if (Platform.OS === 'web') {
               const doc: any = (globalThis as any).document;
               if (doc && !doc.fullscreenElement && doc.documentElement?.requestFullscreen) {
                 try { await doc.documentElement.requestFullscreen(); } catch {}
               }
-            } catch {}
-          }
+            } else {
+              // Native: enter fullscreen by hiding system UI
+              try { StatusBar.setHidden(true, 'fade'); } catch {}
+              if (Platform.OS === 'android') {
+                try {
+                  const NavigationBar = require('expo-navigation-bar');
+                  await NavigationBar.setVisibilityAsync('hidden');
+                  await NavigationBar.setBehaviorAsync('overlay-swipe');
+                } catch {}
+              }
+            }
+          } catch {}
           onStart(selected, life);
         }}
         style={styles.startBtn}
